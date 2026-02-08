@@ -41,22 +41,6 @@ nintcha-front/
 └── public/                 # Static assets
 ```
 
-## Design System
-
-Visit `/design-system` to see all available UI components with interactive examples.
-
-### Available Components
-
-- **Button** - Multiple variants (default, outline, secondary, ghost, destructive, link) and sizes
-- **Badge** - Status indicators and labels
-- **Card** - Content containers with header, content, and footer
-- **Alert Dialog** - Modal dialogs for confirmations
-- **Dropdown Menu** - Contextual menus with items, checkboxes, and radio groups
-- **Select** - Single-value selection from options
-- **Combobox** - Searchable autocomplete selection
-- **Input / Textarea** - Text input fields
-- **Field / Label** - Form field wrappers
-
 ## Related Services
 
 This frontend connects to the Nintcha microservices backend:
