@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
 import { Press_Start_2P } from "next/font/google";
 import "./globals.css";
-import { Footer } from "@/components/footer";
-import { Header } from "@/components/header";
+import { AuthProvider } from "@/components/providers/auth-provider";
 
 const pressStart2P = Press_Start_2P({
 	subsets: ["latin"],
@@ -22,12 +21,13 @@ export default function RootLayout({
 	return (
 		<html lang="en">
 			<body className={`${pressStart2P.className} bg-background`}>
-				<div className="mx-auto max-w-md min-h-screen px-4 py-6 flex flex-col gap-4">
-					<Header />
-					<main className="flex-1">{children}</main>
-					<Footer />
-				</div>
+				<AuthProvider>
+					<div className="mx-auto max-w-md min-h-screen px-4 py-6 flex flex-col gap-4">
+						{children}
+					</div>
+				</AuthProvider>
 			</body>
 		</html>
 	);
 }
+
