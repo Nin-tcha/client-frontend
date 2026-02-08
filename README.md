@@ -1,36 +1,68 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Nintcha Frontend
 
-## Getting Started
+**The client-facing frontend for the Nintcha gacha game.**
 
-First, run the development server:
+This is the player-facing application (not the back-office) where users can interact with the Nintcha game: view their profile, manage monsters, perform invocations, and engage in combat....
+
+## Quick Start
 
 ```bash
+# Install dependencies
+npm install
+
+# Run development server
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+
+# Build for production
+npm run build
+
+# Start production server
+npm start
+
+# Lint code
+npm run lint
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) to view the application.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Project Structure
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```
+nintcha-front/
+├── app/                    # Next.js App Router pages
+│   ├── globals.css         # Global styles & CSS variables
+│   ├── layout.tsx          # Root layout
+│   ├── page.tsx            # Home page
+│   └── design-system/      # Design system showcase
+├── components/
+│   ├── ui/                 # shadcn/ui components
+│   └── ...                 # Custom components
+├── lib/                    # Utility functions
+└── public/                 # Static assets
+```
 
-## Learn More
+## Design System
 
-To learn more about Next.js, take a look at the following resources:
+Visit `/design-system` to see all available UI components with interactive examples.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### Available Components
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- **Button** - Multiple variants (default, outline, secondary, ghost, destructive, link) and sizes
+- **Badge** - Status indicators and labels
+- **Card** - Content containers with header, content, and footer
+- **Alert Dialog** - Modal dialogs for confirmations
+- **Dropdown Menu** - Contextual menus with items, checkboxes, and radio groups
+- **Select** - Single-value selection from options
+- **Combobox** - Searchable autocomplete selection
+- **Input / Textarea** - Text input fields
+- **Field / Label** - Form field wrappers
 
-## Deploy on Vercel
+## Related Services
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+This frontend connects to the Nintcha microservices backend:
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- `auth-service` - Authentication & authorization
+- `player-service` - Player profiles & inventories
+- `monster-service` - Monster data & management
+- `invocation-service` - Gacha/summoning system
+- `combat-service` - PvP combat logic
