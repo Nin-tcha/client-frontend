@@ -8,30 +8,42 @@ import { logoutAction } from "@/lib/auth/actions";
 import { RiLogoutBoxRLine } from "@remixicon/react";
 
 export function Header() {
-  const { session, isLoading } = useAuth();
+	const { session, profile, isLoading } = useAuth();
 
-  // Don't render header on auth pages (when no session and not loading)
-  if (!session && !isLoading) {
-    return null;
-  }
+	// Don't render header on auth pages (when no session and not loading)
+	if (!session && !isLoading) {
+		return null;
+	}
 
-  return (
-    <header>
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <h2>{isLoading ? "..." : session?.username}</h2>
-            <form action={logoutAction}>
-              <Button type="submit" variant="ghost" size="icon" className="size-6">
-                <RiLogoutBoxRLine className="size-4" />
-              </Button>
-            </form>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <ProgressBar value={100} max={100} label="stamina" />
-        </CardContent>
-      </Card>
-    </header>
-  );
+	return (
+		<header>
+			<Card>
+				<CardHeader>
+					<div className="flex items-center justify-between">
+						<div className="flex flex-col gap-1">
+							<h2>{isLoading ? "..." : session?.username}</h2>
+							{profile && (
+								<span className="text-[8px] text-muted-foreground">
+									Lv.{profile.level} • {profile.monsterCount}/{profile.inventoryLimit} monsters
+								</span>
+							)}
+						</div>
+						<form action={logoutAction}>
+							<Button
+								type="submit"
+								variant="ghost"
+								size="icon"
+								className="size-6"
+							>
+								<RiLogoutBoxRLine className="size-4" />
+							</Button>
+						</form>
+					</div>
+				</CardHeader>
+				<CardContent>
+					<ProgressBar value={100} max={100} label="stamina" />
+				</CardContent>
+			</Card>
+		</header>
+	);
 }
