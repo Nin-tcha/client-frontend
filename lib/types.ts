@@ -44,3 +44,21 @@ export interface SummonResult {
 	baseDef: number;
 	baseVit: number;
 }
+
+export interface LeaderboardEntry {
+	username: string;
+	elo: number;
+	wins: number;
+	losses: number;
+}
+
+export interface CombatEvent {
+	type: string;
+	message: string;
+	data: Record<string, unknown>;
+}
+
+export interface FightResult {
+	winner: string;
+	events: CombatEvent[];
+}

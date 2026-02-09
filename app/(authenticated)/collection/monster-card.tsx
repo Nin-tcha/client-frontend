@@ -16,9 +16,16 @@ const ELEMENT_NAMES: Record<string, string> = {
 interface MonsterCardProps {
 	monster: Monster;
 	onMonsterUpdated?: () => void;
+	onClick?: () => void;
+	selected?: boolean;
 }
 
-export function MonsterCard({ monster, onMonsterUpdated }: MonsterCardProps) {
+export function MonsterCard({
+	monster,
+	onMonsterUpdated,
+	onClick,
+	selected,
+}: MonsterCardProps) {
 	const [isModalOpen, setIsModalOpen] = useState(false);
 	const [currentMonster, setCurrentMonster] = useState(monster);
 
@@ -27,12 +34,22 @@ export function MonsterCard({ monster, onMonsterUpdated }: MonsterCardProps) {
 			? (currentMonster.experience / currentMonster.xpThreshold) * 100
 			: 0;
 
+	const handleClick = () => {
+		if (onClick) {
+			onClick();
+		} else {
+			setIsModalOpen(true);
+		}
+	};
+
 	return (
 		<>
 			<button
 				type="button"
-				onClick={() => setIsModalOpen(true)}
-				className="border-2 border-black p-3 bg-card relative text-left w-full hover:bg-muted transition-colors cursor-pointer"
+				onClick={handleClick}
+				className={`border-2 p-3 bg-card relative text-left w-full hover:bg-muted transition-colors cursor-pointer ${
+					selected ? "border-primary ring-2 ring-primary" : "border-black"
+				}`}
 			>
 				{currentMonster.pictureUrl && (
 					<div className="mb-2 flex justify-center">

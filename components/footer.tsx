@@ -26,7 +26,7 @@ const navItems = [
     activeIcon: RiMagicFill,
   },
   {
-    href: "/fight",
+    href: "/combat",
     label: "Fight",
     icon: RiSwordLine,
     activeIcon: RiSwordFill,
