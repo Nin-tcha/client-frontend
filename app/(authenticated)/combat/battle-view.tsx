@@ -50,8 +50,8 @@ export function BattleView({ result, opponent, onClose }: BattleViewProps) {
 										? "mt-4 pt-2 border-t border-green-500/50 font-bold text-yellow-400"
 										: ""
 								} ${e.type === "DAMAGE" ? "text-red-400" : ""} ${
-									e.type === "HEAL" ? "text-blue-400" : ""
-								} ${e.type === "DEATH" ? "text-red-600 font-bold" : ""}`}
+									e.type === "VICTORY" ? "text-blue-400" : ""
+								} ${e.type === "KO" ? "text-red-600 font-bold" : ""}`}
 							>
 								<span className="opacity-50 mr-2">[{e.type}]</span>
 								<span>{e.message}</span>

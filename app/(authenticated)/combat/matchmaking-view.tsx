@@ -7,26 +7,37 @@ import {
 	getBatchMonsters,
 	startFight,
 } from "@/lib/api";
+import { useAuth } from "@/components/providers/auth-provider";
 import { Button } from "@/components/ui/button";
-import type { LeaderboardEntry, Monster, FightResult } from "@/lib/types";
+import type { LeaderboardEntry, Monster } from "@/lib/types";
 import { MonsterCard } from "../collection/monster-card";
 
+const FIGHT_STAMINA_COST = 10;
+
 interface MatchmakingViewProps {
-	onFightStart: (result: FightResult, opponent: LeaderboardEntry) => void;
+	onFightInitiated: (
+		fightId: number,
+		opponent: LeaderboardEntry,
+		oppMonster: Monster
+	) => void;
 }
 
-export function MatchmakingView({ onFightStart }: MatchmakingViewProps) {
+export function MatchmakingView({ onFightInitiated }: MatchmakingViewProps) {
+	const { stamina, refreshStamina } = useAuth();
 	const [opponent, setOpponent] = useState<LeaderboardEntry | null>(null);
 	const [oppTeam, setOppTeam] = useState<Monster[]>([]);
 	const [isSearching, startSearch] = useTransition();
 	const [isStarting, startBattle] = useTransition();
 	const [error, setError] = useState<string | null>(null);
 
+	const insufficientStamina =
+		stamina && stamina.currentStamina < FIGHT_STAMINA_COST;
+
 	const handleSearch = () => {
 		setError(null);
 		setOpponent(null);
 		setOppTeam([]);
-        
+
 		startSearch(async () => {
 			const res = await findOpponent();
 			if (res.success && res.data) {
@@ -48,13 +59,20 @@ export function MatchmakingView({ onFightStart }: MatchmakingViewProps) {
 
 	const handleStartFight = () => {
 		if (!opponent) return;
-        
+
+		if (oppTeam.length === 0) {
+			setError("Opponent has no valid monsters!");
+			return;
+		}
+
 		startBattle(async () => {
 			const res = await startFight(opponent.username);
 			if (res.success && res.data) {
-				onFightStart(res.data, opponent);
+				refreshStamina();
+				onFightInitiated(res.data.fightId, opponent, oppTeam[0]);
 			} else {
 				setError(res.error || "Failed to start fight");
+				refreshStamina();
 			}
 		});
 	};
@@ -64,7 +82,7 @@ export function MatchmakingView({ onFightStart }: MatchmakingViewProps) {
 			<div className="flex flex-col items-center justify-center py-10 space-y-4">
 				<h2 className="text-2xl font-bold">Ready to Battle?</h2>
 				<p className="text-muted-foreground text-center max-w-md">
-					Find a worthy opponent and test your team's strength in the arena!
+					Find a worthy opponent and test your team&apos;s strength in the arena!
 				</p>
 				<Button onClick={handleSearch} disabled={isSearching} size="lg">
 					{isSearching ? "Searching..." : "Find Opponent"}
@@ -127,12 +145,21 @@ export function MatchmakingView({ onFightStart }: MatchmakingViewProps) {
 					variant="destructive"
 					size="lg"
 					onClick={handleStartFight}
-					disabled={isStarting}
-					className="w-32 font-bold"
+					disabled={isStarting || !!insufficientStamina}
+					className="w-40 font-bold"
 				>
-					{isStarting ? "FIGHTING..." : "FIGHT!"}
+					{isStarting
+						? "FIGHTING..."
+						: insufficientStamina
+							? `Need ${FIGHT_STAMINA_COST} Stamina`
+							: `FIGHT! (-${FIGHT_STAMINA_COST})`}
 				</Button>
 			</div>
+			{insufficientStamina && (
+				<p className="text-destructive text-center text-sm mt-2">
+					Not enough stamina! Need {FIGHT_STAMINA_COST}, have {stamina?.currentStamina ?? 0}.
+				</p>
+			)}
 			{error && <p className="text-destructive text-center mt-2">{error}</p>}
 		</div>
 	);
