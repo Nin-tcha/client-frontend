@@ -1,7 +1,7 @@
 "use server";
 
 import { authFetch } from "./auth";
-import type { Monster, SummonResult } from "./types";
+import type { Monster, CombatHistoryEntry, ReplayResponse, StaminaStatus, FightStartResponse, FightStatusResponse, InvocationStatusResponse } from "./types";
 
 const INVOCATION_API_URL =
 	process.env.INVOCATION_API_URL || "http://localhost:8084";
@@ -10,10 +10,11 @@ const MONSTER_API_URL =
 
 /**
  * Summon a new monster (POST /invocations)
+ * Now returns 202 with invocationId + status for async polling.
  */
 export async function summon(): Promise<{
 	success: boolean;
-	data?: SummonResult;
+	data?: { invocationId: number; status: string; message: string };
 	error?: string;
 }> {
 	try {
@@ -21,9 +22,29 @@ export async function summon(): Promise<{
 			method: "POST",
 		});
 
-		if (!response.ok) {
+		if (!response.ok && response.status !== 202) {
 			const error = await response.text();
 			return { success: false, error: error || "Summon failed" };
+		}
+
+		const data = await response.json();
+		return { success: true, data };
+	} catch {
+		return { success: false, error: "Network error" };
+	}
+}
+
+/**
+ * Poll invocation status (GET /invocations/{id})
+ */
+export async function getInvocationStatus(
+	invocationId: number
+): Promise<{ success: boolean; data?: InvocationStatusResponse; error?: string }> {
+	try {
+		const response = await fetch(`${INVOCATION_API_URL}/invocations/${invocationId}`);
+
+		if (!response.ok) {
+			return { success: false, error: "Failed to get invocation status" };
 		}
 
 		const data = await response.json();
@@ -154,6 +175,7 @@ export async function upgradeSkill(
 	}
 }
 const FIGHT_API_URL = process.env.FIGHT_API_URL || "http://localhost:8085";
+const STAMINA_API_URL = process.env.STAMINA_API_URL || "http://localhost:8086";
 
 /**
  * Update player's team (PUT /players/me/team)
@@ -250,10 +272,11 @@ export async function findOpponent(): Promise<{
 
 /**
  * Start a fight (POST /fight/start)
+ * Now returns 202 with fightId + status for async polling.
  */
 export async function startFight(
 	opponent: string
-): Promise<{ success: boolean; data?: any; error?: string }> {
+): Promise<{ success: boolean; data?: FightStartResponse; error?: string }> {
 	try {
 		const response = await authFetch(`${FIGHT_API_URL}/fight/start`, {
 			method: "POST",
@@ -261,9 +284,123 @@ export async function startFight(
 			body: JSON.stringify({ opponent }),
 		});
 
-		if (!response.ok) {
+		if (!response.ok && response.status !== 202) {
 			const error = await response.text();
 			return { success: false, error: error || "Failed to start fight" };
+		}
+
+		const data = await response.json();
+		return { success: true, data };
+	} catch {
+		return { success: false, error: "Network error" };
+	}
+}
+
+/**
+ * Poll fight status (GET /fight/{id})
+ */
+export async function getFightStatus(
+	fightId: number
+): Promise<{ success: boolean; data?: FightStatusResponse; error?: string }> {
+	try {
+		const response = await authFetch(`${FIGHT_API_URL}/fight/${fightId}`);
+
+		if (!response.ok) {
+			const error = await response.text();
+			return { success: false, error: error || "Failed to get fight status" };
+		}
+
+		const data = await response.json();
+		return { success: true, data };
+	} catch {
+		return { success: false, error: "Network error" };
+	}
+}
+
+/**
+ * Get combat history for the current player (GET /fight/history)
+ */
+export async function getCombatHistory(
+	limit = 20
+): Promise<{ success: boolean; data?: CombatHistoryEntry[]; error?: string }> {
+	try {
+		const response = await authFetch(
+			`${FIGHT_API_URL}/fight/history?limit=${limit}`
+		);
+
+		if (!response.ok) {
+			return { success: false, error: "Failed to fetch combat history" };
+		}
+
+		const data = await response.json();
+		return { success: true, data };
+	} catch {
+		return { success: false, error: "Network error" };
+	}
+}
+
+/**
+ * Replay a past fight (POST /fight/replay/{historyId})
+ */
+export async function replayCombat(
+	historyId: number
+): Promise<{ success: boolean; data?: ReplayResponse; error?: string }> {
+	try {
+		const response = await authFetch(
+			`${FIGHT_API_URL}/fight/replay/${historyId}`,
+			{ method: "POST" }
+		);
+
+		if (!response.ok) {
+			const error = await response.text();
+			return { success: false, error: error || "Replay failed" };
+		}
+
+		const data = await response.json();
+		return { success: true, data };
+	} catch {
+		return { success: false, error: "Network error" };
+	}
+}
+
+/**
+ * Get current stamina status (GET /stamina/me)
+ */
+export async function getStamina(): Promise<{
+	success: boolean;
+	data?: StaminaStatus;
+	error?: string;
+}> {
+	try {
+		const response = await authFetch(`${STAMINA_API_URL}/stamina/me`);
+
+		if (!response.ok) {
+			return { success: false, error: "Failed to fetch stamina" };
+		}
+
+		const data = await response.json();
+		return { success: true, data };
+	} catch {
+		return { success: false, error: "Network error" };
+	}
+}
+
+/**
+ * Claim free stamina (POST /stamina/claim)
+ */
+export async function claimStamina(): Promise<{
+	success: boolean;
+	data?: StaminaStatus;
+	error?: string;
+}> {
+	try {
+		const response = await authFetch(`${STAMINA_API_URL}/stamina/claim`, {
+			method: "POST",
+		});
+
+		if (!response.ok) {
+			const error = await response.text();
+			return { success: false, error: error || "Claim failed" };
 		}
 
 		const data = await response.json();
