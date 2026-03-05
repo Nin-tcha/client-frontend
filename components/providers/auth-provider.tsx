@@ -42,6 +42,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 	const pathname = usePathname();
 	const prevPathname = useRef<string | null>(null);
 
+	const sessionRef = useRef<AuthSession | null>(null);
+
 	const refreshStamina = useCallback(async () => {
 		const staminaResult = await getStamina();
 		if (staminaResult.success && staminaResult.data) {
@@ -59,10 +61,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 	}, []);
 
 	const refresh = useCallback(async () => {
-		setIsLoading(true);
+		// Only show loading spinner on initial load (no session yet).
+		// Background refreshes keep existing data visible to avoid UI flicker.
+		if (!sessionRef.current) {
+			setIsLoading(true);
+		}
 		try {
 			const newSession = await validateSession();
 			setSession(newSession);
+			sessionRef.current = newSession;
 
 			// Fetch player profile and stamina if authenticated
 			if (newSession) {

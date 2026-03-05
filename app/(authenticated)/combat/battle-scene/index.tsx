@@ -2,9 +2,9 @@
 
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import type { FightResult, Monster } from "@/lib/types";
+import type { CombatEvent, FightResult, Monster } from "@/lib/types";
 import { cn } from "@/lib/utils";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useReducer, useRef, useState } from "react";
 import { FighterSprite } from "./fighter-sprite";
 
 interface BattleSceneProps {
@@ -36,6 +36,173 @@ const ELEMENT_LABELS: Record<string, string> = {
 	TERRE: "🪨 TERRE",
 };
 
+// --- Reducer types ---
+
+interface BattleState {
+	eventIndex: number;
+	dialogue: string;
+	isFinished: boolean;
+	currentTurn: number;
+	dialogueEffect: "NORMAL" | "STRONG" | "WEAK";
+	currentElement: string | null;
+	myFighter: FighterState;
+	oppFighter: FighterState;
+	/** Delay (ms) the effect should wait before advancing to next event */
+	stepDelay: number;
+}
+
+type BattleAction =
+	| { type: "PROCESS_EVENT"; event: CombatEvent; myUsername?: string; myMonsterName: string }
+	| { type: "FINISH"; winner: string; myUsername?: string }
+	| { type: "ADVANCE" }
+	| { type: "SKIP"; events: CombatEvent[]; myUsername?: string; myMonsterHp: number; oppMonsterHp: number };
+
+function battleReducer(state: BattleState, action: BattleAction): BattleState {
+	switch (action.type) {
+		case "FINISH":
+			return {
+				...state,
+				isFinished: true,
+				dialogue: action.winner === action.myUsername ? "You won!" : "You were defeated...",
+				dialogueEffect: "NORMAL",
+			};
+
+		case "ADVANCE":
+			return {
+				...state,
+				eventIndex: state.eventIndex + 1,
+			};
+
+		case "SKIP": {
+			let myHP = action.myMonsterHp;
+			let oppHP = action.oppMonsterHp;
+
+			action.events.forEach((e) => {
+				if (e.type === "DAMAGE") {
+					const isMe = e.targetOwner === action.myUsername;
+					if (isMe) myHP = e.data.hpAfter as number;
+					else oppHP = e.data.hpAfter as number;
+				} else if (e.type === "KO") {
+					const isMe = e.actorOwner === action.myUsername;
+					if (isMe) myHP = 0;
+					else oppHP = 0;
+				}
+			});
+
+			return {
+				...state,
+				eventIndex: action.events.length,
+				myFighter: {
+					...state.myFighter,
+					currentHp: myHP,
+					animation: myHP === 0 ? "dying" : "idle",
+				},
+				oppFighter: {
+					...state.oppFighter,
+					currentHp: oppHP,
+					animation: oppHP === 0 ? "dying" : "idle",
+				},
+			};
+		}
+
+		case "PROCESS_EVENT": {
+			const { event, myUsername, myMonsterName } = action;
+
+			// Base reset for every new event step
+			const next: BattleState = {
+				...state,
+				dialogueEffect: "NORMAL",
+				currentElement: null,
+				myFighter: { ...state.myFighter, animation: "idle" },
+				oppFighter: { ...state.oppFighter, animation: "idle" },
+				stepDelay: 1500,
+			};
+
+			switch (event.type) {
+				case "TURN_START":
+					next.currentTurn = event.turn ?? next.currentTurn;
+					next.dialogue = `Turn ${event.turn || next.currentTurn} begins!`;
+					next.stepDelay = 1000;
+					break;
+
+				case "SKILL_USE":
+				case "SKIP":
+					next.dialogue = event.message || `${event.actor} acts!`;
+					if (event.type === "SKILL_USE") {
+						const el = event.data.skillElement as string;
+						if (el) next.currentElement = el;
+
+						let isActorMe = false;
+						if (event.actorOwner && myUsername) {
+							isActorMe = event.actorOwner === myUsername;
+						} else {
+							const actorName = event.actor?.trim();
+							isActorMe = actorName === myMonsterName.trim();
+						}
+
+						if (isActorMe) {
+							next.myFighter = { ...next.myFighter, animation: "attacking" };
+						} else {
+							next.oppFighter = { ...next.oppFighter, animation: "attacking" };
+						}
+					}
+					next.stepDelay = 1500;
+					break;
+
+				case "DAMAGE": {
+					next.dialogue = event.message || `${event.target} takes damage!`;
+					const hpAfter = event.data.hpAfter as number;
+
+					let isTargetMe = false;
+					if (event.targetOwner && myUsername) {
+						isTargetMe = event.targetOwner === myUsername;
+					} else {
+						const targetName = event.target?.trim();
+						isTargetMe = targetName === myMonsterName.trim();
+					}
+
+					if (isTargetMe) {
+						next.myFighter = { ...next.myFighter, currentHp: hpAfter, animation: "hit" };
+					} else {
+						next.oppFighter = { ...next.oppFighter, currentHp: hpAfter, animation: "hit" };
+					}
+					next.stepDelay = 1500;
+
+					const damageEl = event.data.skillElement as string;
+					if (damageEl) next.currentElement = damageEl;
+
+					const eff = event.data.effectiveness as "NORMAL" | "STRONG" | "WEAK";
+					if (eff && eff !== "NORMAL") {
+						next.dialogueEffect = eff;
+						next.dialogue = `${next.dialogue} — ${eff === "STRONG" ? "It's super effective!" : "It's not very effective..."}`;
+					}
+					break;
+				}
+
+				case "KO":
+					next.dialogue = event.message || `${event.target} works!`;
+					if (event.target === myMonsterName) {
+						next.myFighter = { ...next.myFighter, animation: "dying" };
+					} else {
+						next.oppFighter = { ...next.oppFighter, animation: "dying" };
+					}
+					next.stepDelay = 2000;
+					break;
+
+				case "VICTORY":
+					next.dialogue = event.message || `${event.data.winner} wins!`;
+					next.stepDelay = 3000;
+					break;
+			}
+
+			return next;
+		}
+
+		default:
+			return state;
+	}
+}
+
 export function BattleScene({
 	result,
 	myMonster,
@@ -44,25 +211,31 @@ export function BattleScene({
 	oppUsername,
 	onClose,
 }: BattleSceneProps) {
-	const [eventIndex, setEventIndex] = useState(0);
-	const [dialogue, setDialogue] = useState("Battle Start!");
-	const [isFinished, setIsFinished] = useState(false);
-	const [currentTurn, setCurrentTurn] = useState(1);
 	const [playbackSpeed, setPlaybackSpeed] = useState(1);
-	const [dialogueEffect, setDialogueEffect] = useState<"NORMAL" | "STRONG" | "WEAK">("NORMAL");
-	const [currentElement, setCurrentElement] = useState<string | null>(null);
 
-	// Fighter states
-	const [myFighter, setMyFighter] = useState<FighterState>({
-		currentHp: myMonster.hp,
-		maxHp: myMonster.hp,
-		animation: "idle",
+	const [state, dispatch] = useReducer(battleReducer, {
+		eventIndex: 0,
+		dialogue: "Battle Start!",
+		isFinished: false,
+		currentTurn: 1,
+		dialogueEffect: "NORMAL" as const,
+		currentElement: null,
+		myFighter: { currentHp: myMonster.hp, maxHp: myMonster.hp, animation: "idle" as const },
+		oppFighter: { currentHp: oppMonster.hp, maxHp: oppMonster.hp, animation: "idle" as const },
+		stepDelay: 1500,
 	});
-	const [oppFighter, setOppFighter] = useState<FighterState>({
-		currentHp: oppMonster.hp,
-		maxHp: oppMonster.hp,
-		animation: "idle",
-	});
+
+	const {
+		eventIndex,
+		dialogue,
+		isFinished,
+		currentTurn,
+		dialogueEffect,
+		currentElement,
+		myFighter,
+		oppFighter,
+		stepDelay,
+	} = state;
 
 	// Use ref to clear timeout on unmount or finish
 	const timeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -70,153 +243,44 @@ export function BattleScene({
 	useEffect(() => {
 		if (eventIndex >= result.events.length) {
 			if (!isFinished) {
-				setIsFinished(true);
-				setDialogue(
-					result.winner === myUsername
-						? "You won!"
-						: "You were defeated..."
-				);
-				setDialogueEffect("NORMAL");
+				dispatch({ type: "FINISH", winner: result.winner, myUsername });
 			}
 			return;
 		}
 
-		// Reset animations and effect for new step
-		setDialogueEffect("NORMAL");
-		setCurrentElement(null);
-		setMyFighter((prev) => ({ ...prev, animation: "idle" }));
-		setOppFighter((prev) => ({ ...prev, animation: "idle" }));
+		// Process current event — all state updates happen inside the reducer (no direct setState)
+		dispatch({
+			type: "PROCESS_EVENT",
+			event: result.events[eventIndex],
+			myUsername,
+			myMonsterName: myMonster.name,
+		});
+	}, [eventIndex, result.events, result.winner, isFinished, myUsername, myMonster.name]);
 
-		const event = result.events[eventIndex];
-		let delay = 1500;
-
-		switch (event.type) {
-			case "TURN_START":
-				if (event.turn) setCurrentTurn(event.turn);
-				setDialogue(`Turn ${event.turn || currentTurn} begins!`);
-				delay = 1000;
-				break;
-
-			case "SKILL_USE":
-			case "SKIP":
-				setDialogue(event.message || `${event.actor} acts!`);
-				if (event.type === "SKILL_USE") {
-					const el = event.data.skillElement as string;
-					if (el) setCurrentElement(el);
-					// Use strict comparison but allow trim just in case
-					let isActorMe = false;
-					if (event.actorOwner && myUsername) {
-						isActorMe = event.actorOwner === myUsername;
-					} else {
-						const actorName = event.actor?.trim();
-						const myName = myMonster.name.trim();
-						isActorMe = actorName === myName;
-					}
-
-					if (isActorMe) {
-						setMyFighter((prev) => ({ ...prev, animation: "attacking" }));
-					} else {
-						setOppFighter((prev) => ({ ...prev, animation: "attacking" }));
-					}
-				}
-				delay = 1500;
-				break;
-
-			case "DAMAGE":
-				setDialogue(event.message || `${event.target} takes damage!`);
-				// event.data has finalDamage, hpAfter
-				const hpAfter = event.data.hpAfter as number;
-				// const damage = event.data.finalDamage as number;
-
-				let isTargetMe = false;
-				if (event.targetOwner && myUsername) {
-					isTargetMe = event.targetOwner === myUsername;
-				} else {
-					const targetName = event.target?.trim();
-					isTargetMe = targetName === myMonster.name.trim();
-				}
-
-				if (isTargetMe) {
-					setMyFighter((prev) => ({
-						...prev,
-						currentHp: hpAfter,
-						animation: "hit",
-					}));
-				} else {
-					setOppFighter((prev) => ({
-						...prev,
-						currentHp: hpAfter,
-						animation: "hit",
-					}));
-				}
-				delay = 1500;
-
-				const damageEl = event.data.skillElement as string;
-				if (damageEl) setCurrentElement(damageEl);
-
-				const eff = event.data.effectiveness as "NORMAL" | "STRONG" | "WEAK";
-				if (eff && eff !== "NORMAL") {
-					setDialogueEffect(eff);
-					setDialogue((prev) => `${prev} — ${eff === "STRONG" ? "It's super effective!" : "It's not very effective..."}`);
-				}
-				break;
-
-			case "KO":
-				setDialogue(event.message || `${event.target} works!`);
-				if (event.target === myMonster.name) {
-					setMyFighter((prev) => ({ ...prev, animation: "dying" }));
-				} else {
-					setOppFighter((prev) => ({ ...prev, animation: "dying" }));
-				}
-				delay = 2000;
-				break;
-
-			case "VICTORY":
-				setDialogue(event.message || `${event.data.winner} wins!`);
-				delay = 3000;
-				break;
-		}
+	// Schedule advancement to next event based on stepDelay from reducer
+	useEffect(() => {
+		if (isFinished || eventIndex >= result.events.length) return;
 
 		const timer = setTimeout(() => {
-			setEventIndex((prev) => prev + 1);
-		}, delay / playbackSpeed);
+			dispatch({ type: "ADVANCE" });
+		}, stepDelay / playbackSpeed);
 		timeoutRef.current = timer;
 
 		return () => {
 			clearTimeout(timer);
 			timeoutRef.current = null;
 		};
-	}, [eventIndex, result.events, isFinished, myUsername, myMonster.name, currentTurn, playbackSpeed]);
+	}, [eventIndex, isFinished, result.events.length, stepDelay, playbackSpeed]);
 
 	const skipBattle = () => {
 		if (timeoutRef.current) clearTimeout(timeoutRef.current);
-
-		let myHP = myMonster.hp;
-		let oppHP = oppMonster.hp;
-
-		result.events.forEach((e) => {
-			if (e.type === "DAMAGE") {
-				const isMe = e.targetOwner === myUsername;
-				if (isMe) myHP = e.data.hpAfter as number;
-				else oppHP = e.data.hpAfter as number;
-			} else if (e.type === "KO") {
-				const isMe = e.actorOwner === myUsername;
-				if (isMe) myHP = 0;
-				else oppHP = 0;
-			}
+		dispatch({
+			type: "SKIP",
+			events: result.events,
+			myUsername,
+			myMonsterHp: myMonster.hp,
+			oppMonsterHp: oppMonster.hp,
 		});
-
-		setMyFighter((p) => ({
-			...p,
-			currentHp: myHP,
-			animation: myHP === 0 ? "dying" : "idle",
-		}));
-		setOppFighter((p) => ({
-			...p,
-			currentHp: oppHP,
-			animation: oppHP === 0 ? "dying" : "idle",
-		}));
-		setEventIndex(result.events.length);
 	};
 
 	return (

@@ -31,7 +31,6 @@ export function HistoryView({ onReplayStart, myUsername }: HistoryViewProps) {
 	const [isPending, startTransition] = useTransition();
 
 	useEffect(() => {
-		setLoading(true);
 		getCombatHistory(20).then((res) => {
 			if (res.success && res.data) {
 				setHistory(res.data);

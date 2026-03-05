@@ -109,15 +109,12 @@ const badgeVariants = ["default", "secondary", "outline", "destructive"] as cons
 const frameworks = ["Next.js", "SvelteKit", "Nuxt.js", "Remix", "Astro"] as const
 
 export default function DesignSystemPage() {
-  const [isDark, setIsDark] = React.useState(false)
+  const [isDark, setIsDark] = React.useState(() =>
+    typeof document !== "undefined" && document.documentElement.classList.contains("dark")
+  )
   const [dropdownCheck1, setDropdownCheck1] = React.useState(true)
   const [dropdownCheck2, setDropdownCheck2] = React.useState(false)
   const [dropdownRadio, setDropdownRadio] = React.useState("option1")
-
-  React.useEffect(() => {
-    // Check initial theme
-    setIsDark(document.documentElement.classList.contains("dark"))
-  }, [])
 
   const toggleTheme = () => {
     document.documentElement.classList.toggle("dark")

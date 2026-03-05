@@ -33,23 +33,27 @@ export default function CombatPage() {
 
 	// Fetch my active monster when entering arena
 	useEffect(() => {
-		if (view === "arena") {
+		if (view !== "arena") return;
+		let cancelled = false;
+		async function fetchTeam() {
 			setLoadingTeam(true);
-			getMyProfile().then(async (p) => {
-				if (p.data) {
-					setMyUsername(p.data.username);
-					if (p.data.teamIds && p.data.teamIds.length > 0) {
-						const res = await getBatchMonsters([
-							p.data.teamIds[0],
-						]);
-						if (res.data && res.data.length > 0) {
-							setMyMonster(res.data[0]);
-						}
+			const p = await getMyProfile();
+			if (cancelled) return;
+			if (p.data) {
+				setMyUsername(p.data.username);
+				if (p.data.teamIds && p.data.teamIds.length > 0) {
+					const res = await getBatchMonsters([
+						p.data.teamIds[0],
+					]);
+					if (!cancelled && res.data && res.data.length > 0) {
+						setMyMonster(res.data[0]);
 					}
 				}
-				setLoadingTeam(false);
-			});
+			}
+			if (!cancelled) setLoadingTeam(false);
 		}
+		fetchTeam();
+		return () => { cancelled = true; };
 	}, [view]);
 
 	// Also fetch username for history tab

@@ -23,28 +23,34 @@ export function FighterSprite({
 	animationState,
 	playbackSpeed = 1,
 }: FighterSpriteProps) {
-	const [shake, setShake] = useState(false);
-	const [flash, setFlash] = useState(false);
-	const [lunge, setLunge] = useState(false);
+	// Tracks which animationState has had its visual effect cleared by the timeout.
+	// When animationState changes, this no longer matches, so effects re-activate.
+	const [clearedState, setClearedState] = useState<string | null>(null);
     const [imageLoading, setImageLoading] = useState(true);
 
+	// Derive animation booleans — active when the current animationState hasn't been cleared
+	const effectActive = (animationState === "hit" || animationState === "attacking") && clearedState !== animationState;
+	const shake = animationState === "hit" && effectActive;
+	const flash = animationState === "hit" && effectActive;
+	const lunge = animationState === "attacking" && effectActive;
+
+	// Schedule clearing the visual effect after a short duration
 	useEffect(() => {
 		if (animationState === "hit") {
-			setShake(true);
-			setFlash(true);
 			const timer = setTimeout(() => {
-				setShake(false);
-				setFlash(false);
+				setClearedState("hit");
 			}, 500 / playbackSpeed);
 			return () => clearTimeout(timer);
 		}
 		if (animationState === "attacking") {
-			setLunge(true);
 			const timer = setTimeout(() => {
-				setLunge(false);
+				setClearedState("attacking");
 			}, 300 / playbackSpeed);
 			return () => clearTimeout(timer);
 		}
+		// For idle/dying, reset cleared tracking via setTimeout (async, not synchronous in effect body)
+		const timer = setTimeout(() => setClearedState(null), 0);
+		return () => clearTimeout(timer);
 	}, [animationState, playbackSpeed]);
 
 	const hpPercentage = (currentHp / maxHp) * 100;
@@ -63,7 +69,7 @@ export function FighterSprite({
 			)}
 			style={{ 
 				transitionDuration: `${300 / playbackSpeed}ms`,
-				// @ts-ignore
+				// @ts-expect-error — CSS custom property not in CSSProperties type
 				"--playback-speed": playbackSpeed 
 			}}
 		>

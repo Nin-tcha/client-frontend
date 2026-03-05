@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader } from "./ui/card";
 import { ProgressBar } from "./ui/progress-bar";
 import { Button } from "./ui/button";
@@ -8,53 +8,59 @@ import { useAuth } from "./providers/auth-provider";
 import { logoutAction } from "@/lib/auth/actions";
 import { RiLogoutBoxRLine, RiFlashlightFill } from "@remixicon/react";
 
-function formatCountdown(nextClaimAt: string | null): string | null {
-	if (!nextClaimAt) return null;
-	const diff = new Date(nextClaimAt).getTime() - Date.now();
-	if (diff <= 0) return null;
-	const minutes = Math.floor(diff / 60000);
-	const seconds = Math.floor((diff % 60000) / 1000);
-	return `${minutes}:${seconds.toString().padStart(2, "0")}`;
+interface StaminaDisplay {
+	displayStamina: number;
+	countdown: string | null;
+	regenHint: string | null;
+}
+
+function computeStaminaDisplay(stamina: { currentStamina: number; maxStamina: number; lastRegenTime: string; nextClaimAt?: string | null }): StaminaDisplay {
+	const now = Date.now();
+
+	// Countdown to next claim
+	let countdown: string | null = null;
+	if (stamina.nextClaimAt) {
+		const diff = new Date(stamina.nextClaimAt).getTime() - now;
+		if (diff > 0) {
+			const minutes = Math.floor(diff / 60000);
+			const seconds = Math.floor((diff % 60000) / 1000);
+			countdown = `${minutes}:${seconds.toString().padStart(2, "0")}`;
+		}
+	}
+
+	// Estimated current stamina (with client-side regen)
+	const elapsed = (now - new Date(stamina.lastRegenTime).getTime()) / 60000;
+	const regenned = Math.floor(elapsed);
+	const displayStamina = Math.min(stamina.maxStamina, stamina.currentStamina + regenned);
+
+	// Regen hint
+	let regenHint: string | null = null;
+	if (displayStamina < stamina.maxStamina) {
+		const elapsedMs = now - new Date(stamina.lastRegenTime).getTime();
+		const msIntoCurrentMinute = elapsedMs % 60000;
+		const secsLeft = Math.ceil((60000 - msIntoCurrentMinute) / 1000);
+		regenHint = `+1 in ${secsLeft}s`;
+	}
+
+	return { displayStamina, countdown, regenHint };
 }
 
 export function Header() {
 	const { session, profile, stamina, isLoading, claimStamina, refreshStamina } = useAuth();
 	const [claiming, setClaiming] = useState(false);
-	const [countdown, setCountdown] = useState<string | null>(null);
+	const [staminaDisplay, setStaminaDisplay] = useState<StaminaDisplay>({ displayStamina: 0, countdown: null, regenHint: null });
 
-	// Compute the displayed stamina including client-side regen estimate
-	const computeDisplayStamina = useCallback(() => {
-		if (!stamina) return 0;
-		const elapsed = (Date.now() - new Date(stamina.lastRegenTime).getTime()) / 60000;
-		const regenned = Math.floor(elapsed);
-		return Math.min(stamina.maxStamina, stamina.currentStamina + regenned);
-	}, [stamina]);
-
-	const [displayStamina, setDisplayStamina] = useState(0);
-	const [regenHint, setRegenHint] = useState<string | null>(null);
-
-	// Update countdown, display stamina, and regen hint every second
+	// Recompute stamina display every second — all Date.now() calls happen inside the interval callback (async context)
 	useEffect(() => {
 		if (!stamina) return;
-		const update = () => {
-			setCountdown(formatCountdown(stamina.nextClaimAt));
-			const current = computeDisplayStamina();
-			setDisplayStamina(current);
+		const compute = () => setStaminaDisplay(computeStaminaDisplay(stamina));
+		// Immediate compute via setTimeout so it is NOT synchronous setState in the effect body
+		const immediate = setTimeout(compute, 0);
+		const interval = setInterval(compute, 1000);
+		return () => { clearTimeout(immediate); clearInterval(interval); };
+	}, [stamina]);
 
-			// Compute seconds until next +1 regen
-			if (current < (stamina.maxStamina)) {
-				const elapsedMs = Date.now() - new Date(stamina.lastRegenTime).getTime();
-				const msIntoCurrentMinute = elapsedMs % 60000;
-				const secsLeft = Math.ceil((60000 - msIntoCurrentMinute) / 1000);
-				setRegenHint(`+1 in ${secsLeft}s`);
-			} else {
-				setRegenHint(null);
-			}
-		};
-		update();
-		const interval = setInterval(update, 1000);
-		return () => clearInterval(interval);
-	}, [stamina, computeDisplayStamina]);
+	const { displayStamina, countdown, regenHint } = staminaDisplay;
 
 	// Refresh stamina from server every 60s to stay in sync
 	useEffect(() => {
