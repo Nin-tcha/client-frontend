@@ -4,6 +4,7 @@ interface ProgressBarProps {
   value: number;
   max: number;
   label?: string;
+  hint?: string;
   showText?: boolean;
   className?: string;
   barClassName?: string;
@@ -13,6 +14,7 @@ export function ProgressBar({
   value,
   max,
   label,
+  hint,
   showText = true,
   className,
   barClassName,
@@ -21,8 +23,15 @@ export function ProgressBar({
 
   return (
     <div className={cn("w-full", className)}>
-      {label && (
-        <span className="text-xs text-muted-foreground mb-1 block">{label}</span>
+      {(label || hint) && (
+        <div className="flex items-center justify-between mb-1">
+          {label && (
+            <span className="text-xs text-muted-foreground">{label}</span>
+          )}
+          {hint && (
+            <span className="text-[8px] text-muted-foreground">{hint}</span>
+          )}
+        </div>
       )}
       <div className="relative h-4 w-full border-2 border-black bg-secondary overflow-hidden">
         <div
