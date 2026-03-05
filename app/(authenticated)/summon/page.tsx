@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { useAuth } from "@/components/providers/auth-provider";
 import { summonAction, type SummonState } from "./actions";
+import { LoadingOverlay } from "@/components/ui/loader";
 
 const ELEMENT_COLORS: Record<string, string> = {
 	FEU: "bg-red-500",
@@ -12,21 +13,27 @@ const ELEMENT_COLORS: Record<string, string> = {
 	AIR: "bg-green-500",
 };
 
+const SUMMON_STAMINA_COST = 20;
+
 export default function SummonPage() {
 	const [state, formAction, isPending] = useActionState<SummonState, FormData>(
 		summonAction,
 		null
 	);
 	const formId = useId();
-	const { profile, refresh } = useAuth();
+	const { profile, stamina, refresh, refreshStamina } = useAuth();
 
 	const isInventoryFull =
 		profile && profile.monsterCount >= profile.inventoryLimit;
 
+	const insufficientStamina =
+		stamina && stamina.currentStamina < SUMMON_STAMINA_COST;
+
 	const handleSubmit = async (formData: FormData) => {
 		await formAction(formData);
-		// Refresh profile after summon to update header
+		// Refresh profile and stamina after summon to update header
 		refresh();
+		refreshStamina();
 	};
 
 	return (
@@ -34,7 +41,8 @@ export default function SummonPage() {
 			<CardHeader>
 				<h1>Summon</h1>
 			</CardHeader>
-			<CardContent className="flex flex-col gap-4">
+			<CardContent className="flex flex-col gap-4 relative">
+                {isPending && <LoadingOverlay />}
 				{/* Summon Result Display */}
 				{state?.success && state.result && (
 					<div className="border-2 border-black p-4 bg-card animate-pulse">
@@ -80,23 +88,32 @@ export default function SummonPage() {
 					</p>
 				)}
 
+				{/* Insufficient Stamina Warning */}
+				{insufficientStamina && !isInventoryFull && (
+					<p className="text-destructive text-[10px] text-center">
+						Not enough stamina! Need {SUMMON_STAMINA_COST}, have {stamina?.currentStamina ?? 0}.
+					</p>
+				)}
+
 				{/* Summon Form */}
 				<form id={formId} action={handleSubmit}>
 					<Button
 						type="submit"
-						disabled={isPending || isInventoryFull}
+						disabled={isPending || !!isInventoryFull || !!insufficientStamina}
 						className="w-full"
 					>
 						{isPending
 							? "Summoning..."
 							: isInventoryFull
 								? "Inventory Full"
-								: "Invoke Monster"}
+								: insufficientStamina
+									? `Need ${SUMMON_STAMINA_COST} Stamina`
+									: `Invoke Monster (-${SUMMON_STAMINA_COST} Stamina)`}
 					</Button>
 				</form>
 
 				<p className="text-[10px] text-muted-foreground text-center">
-					Summon a random monster to add to your collection!
+					Summon a random monster to add to your collection! Costs {SUMMON_STAMINA_COST} stamina.
 				</p>
 			</CardContent>
 		</Card>
