@@ -5,11 +5,13 @@ import type { Monster } from "@/lib/types";
 import { getMyMonsters, getMyProfile, setTeam } from "@/lib/api";
 import { MonsterCard } from "../collection/monster-card";
 import { Button } from "@/components/ui/button";
+import { useToast } from "@/components/ui/toast";
 
 export function TeamSelector() {
 	const [monsters, setMonsters] = useState<Monster[]>([]);
 	const [selectedIds, setSelectedIds] = useState<number[]>([]);
 	const [isPending, startTransition] = useTransition();
+	const toast = useToast();
 
 	useEffect(() => {
 		async function fetchData() {
@@ -45,15 +47,15 @@ export function TeamSelector() {
 
 	const handleSave = () => {
 		if (selectedIds.length === 0) {
-			alert("Please select at least one monster!");
+			toast.error("Please select at least one monster!");
 			return;
 		}
 		startTransition(async () => {
 			const res = await setTeam(selectedIds);
 			if (res.success) {
-				alert("Team saved successfully!");
+				toast.success("Team saved successfully!");
 			} else {
-				alert("Failed to save team: " + res.error);
+				toast.error("Failed to save team: " + res.error);
 			}
 		});
 	};

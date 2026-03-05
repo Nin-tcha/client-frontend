@@ -9,6 +9,8 @@ import type { Monster, Skill } from "@/lib/types";
 import { upgradeSkillAction, releaseMonsterAction } from "./actions";
 import Image from "next/image";
 import { RiAddLine, RiCloseLine, RiDeleteBin6Line } from "@remixicon/react";
+import { LoadingOverlay } from "@/components/ui/loader";
+import { useToast } from "@/components/ui/toast";
 
 const ELEMENT_NAMES: Record<string, string> = {
 	FEU: "FIRE",
@@ -76,6 +78,7 @@ export function MonsterDetailModal({
 	const [isPending, startTransition] = useTransition();
 	const { refresh } = useAuth();
 	const [currentMonster, setCurrentMonster] = useState(monster);
+	const toast = useToast();
 
 	const handleUpgradeSkill = (skillNumber: number) => {
 		// Validation checks
@@ -112,7 +115,7 @@ export function MonsterDetailModal({
 			} else {
 				// Revert on failure
 				setCurrentMonster(previousMonster);
-				alert(result.error || "Failed to upgrade skill");
+				toast.error(result.error || "Failed to upgrade skill");
 			}
 		});
 	};
@@ -126,7 +129,7 @@ export function MonsterDetailModal({
 					onClose();
 					refresh();
 				} else {
-					alert(result.error || "Failed to release monster");
+					toast.error(result.error || "Failed to release monster");
 				}
 			});
 		}
@@ -138,7 +141,8 @@ export function MonsterDetailModal({
 
 	return (
 		<div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-			<Card className="w-full max-w-sm max-h-[90vh] overflow-auto">
+            {isPending && <LoadingOverlay />}
+			<Card className="w-full max-w-sm max-h-[90vh] overflow-auto relative">
 				<CardHeader>
 					<div className="flex justify-between items-start">
 						<div className="flex flex-col">
