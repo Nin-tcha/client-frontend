@@ -6,11 +6,21 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { useAuth } from "@/components/providers/auth-provider";
 import { summonAction, type SummonState } from "./actions";
 import { LoadingOverlay } from "@/components/ui/loader";
+import Image from "next/image";
 
-const ELEMENT_COLORS: Record<string, string> = {
-	FEU: "bg-red-500",
-	EAU: "bg-blue-500",
-	AIR: "bg-green-500",
+const RARITY_BORDER: Record<string, string> = {
+	COMMON:    "border-t-gray-500   border-l-gray-500",
+	RARE:      "border-t-blue-500   border-l-blue-500",
+	EPIC:      "border-t-purple-500 border-l-purple-500",
+	LEGENDARY: "border-t-amber-400  border-l-amber-400",
+	MYTHIC:    "border-t-red-500    border-l-red-500",
+};
+
+const ELEMENT_BORDER: Record<string, string> = {
+	FEU:   "border-b-red-500     border-r-red-500",
+	EAU:   "border-b-blue-500    border-r-blue-500",
+	VENT:  "border-b-emerald-500 border-r-emerald-500",
+	TERRE: "border-b-amber-700   border-r-amber-700",
 };
 
 const SUMMON_STAMINA_COST = 20;
@@ -36,6 +46,14 @@ export default function SummonPage() {
 		refreshStamina();
 	};
 
+	const summonResult = state?.success && state.result ? state.result : null;
+	const rarityBorder = summonResult?.rarity
+		? (RARITY_BORDER[summonResult.rarity] ?? "border-t-black border-l-black")
+		: "border-t-black border-l-black";
+	const elementBorder = summonResult
+		? (ELEMENT_BORDER[summonResult.element] ?? "border-b-black border-r-black")
+		: "border-b-black border-r-black";
+
 	return (
 		<Card>
 			<CardHeader>
@@ -44,35 +62,57 @@ export default function SummonPage() {
 			<CardContent className="flex flex-col gap-4 relative">
                 {isPending && <LoadingOverlay />}
 				{/* Summon Result Display */}
-				{state?.success && state.result && (
-					<div className="border-2 border-black p-4 bg-card animate-pulse">
-						<div className="flex items-center gap-2 mb-2">
-							<span
-								className={`w-3 h-3 rounded-full ${ELEMENT_COLORS[state.result.element] || "bg-gray-400"}`}
-							/>
-							<h2 className="text-sm">{state.result.name}</h2>
+				{summonResult && (
+					<div className={`border-4 bg-card shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] overflow-hidden ${rarityBorder} ${elementBorder}`}>
+						{/* Image area */}
+						<div className="relative w-full aspect-square bg-muted overflow-hidden">
+							{summonResult.pictureUrl ? (
+								<Image
+									src={summonResult.pictureUrl}
+									alt={summonResult.name}
+									fill
+									className="object-cover"
+								/>
+							) : (
+								<div className="w-full h-full flex items-center justify-center">
+									<span className="text-[8px] text-muted-foreground">No Image</span>
+								</div>
+							)}
 						</div>
-						<p className="text-[10px] text-muted-foreground">
-							{state.result.message}
-						</p>
-						<div className="mt-2 grid grid-cols-4 gap-1 text-[8px]">
+
+						{/* Name strip */}
+						<div className="px-2 py-1.5 border-t border-black">
+							<h2 className="text-[10px] font-bold truncate">
+								{summonResult.name}
+							</h2>
+						</div>
+
+						{/* Stats grid */}
+						<div className="grid grid-cols-4 gap-1 text-[8px] px-2 py-1.5 border-t border-black">
 							<div className="text-center">
 								<div className="font-bold">HP</div>
-								<div>{state.result.baseHp}</div>
+								<div>{summonResult.baseHp}</div>
 							</div>
 							<div className="text-center">
 								<div className="font-bold">ATK</div>
-								<div>{state.result.baseAtk}</div>
+								<div>{summonResult.baseAtk}</div>
 							</div>
 							<div className="text-center">
 								<div className="font-bold">DEF</div>
-								<div>{state.result.baseDef}</div>
+								<div>{summonResult.baseDef}</div>
 							</div>
 							<div className="text-center">
 								<div className="font-bold">VIT</div>
-								<div>{state.result.baseVit}</div>
+								<div>{summonResult.baseVit}</div>
 							</div>
 						</div>
+
+						{/* Message */}
+						{summonResult.message && (
+							<p className="text-[8px] text-muted-foreground px-2 py-1.5 border-t border-black">
+								{summonResult.message}
+							</p>
+						)}
 					</div>
 				)}
 

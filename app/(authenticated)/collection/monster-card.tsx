@@ -1,16 +1,23 @@
 "use client";
 
 import { useState } from "react";
-import { ProgressBar } from "@/components/ui/progress-bar";
 import type { Monster } from "@/lib/types";
 import Image from "next/image";
 import { MonsterDetailModal } from "./monster-detail-modal";
 
-const ELEMENT_NAMES: Record<string, string> = {
-	FEU: "FIRE",
-	EAU: "WATER",
-	AIR: "WIND",
-	TERRE: "EARTH",
+const RARITY_BORDER: Record<string, string> = {
+	COMMON:    "border-t-gray-500   border-l-gray-500",
+	RARE:      "border-t-blue-500   border-l-blue-500",
+	EPIC:      "border-t-purple-500 border-l-purple-500",
+	LEGENDARY: "border-t-amber-400  border-l-amber-400",
+	MYTHIC:    "border-t-red-500    border-l-red-500",
+};
+
+const ELEMENT_BORDER: Record<string, string> = {
+	FEU:   "border-b-red-500     border-r-red-500",
+	EAU:   "border-b-blue-500    border-r-blue-500",
+	VENT:  "border-b-emerald-500 border-r-emerald-500",
+	TERRE: "border-b-amber-700   border-r-amber-700",
 };
 
 interface MonsterCardProps {
@@ -42,39 +49,57 @@ export function MonsterCard({
 		}
 	};
 
+	const rarityBorder = currentMonster.rarity
+		? (RARITY_BORDER[currentMonster.rarity] ?? "border-t-black border-l-black")
+		: "border-t-black border-l-black";
+	const elementBorder = ELEMENT_BORDER[currentMonster.element] ?? "border-b-black border-r-black";
+
 	return (
 		<>
 			<button
 				type="button"
 				onClick={handleClick}
-				className={`border-2 p-3 bg-card relative text-left w-full hover:bg-muted transition-colors cursor-pointer ${
-					selected ? "border-primary ring-2 ring-primary" : "border-black"
+				className={`border-4 bg-card relative text-left w-full hover:bg-muted transition-colors cursor-pointer overflow-hidden shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:shadow-none active:translate-x-[4px] active:translate-y-[4px] ${
+					selected
+						? "border-primary ring-2 ring-primary"
+						: `${rarityBorder} ${elementBorder}`
 				}`}
 			>
-				{currentMonster.pictureUrl && (
-					<div className="mb-2 flex justify-center">
+				{/* Image area */}
+				<div className="relative w-full aspect-square bg-muted overflow-hidden">
+					{currentMonster.pictureUrl ? (
 						<Image
 							src={currentMonster.pictureUrl}
 							alt={currentMonster.name}
-							width={48}
-							height={48}
-							className="rounded"
+							fill
+							className="object-cover"
+						/>
+					) : (
+						<div className="w-full h-full flex items-center justify-center">
+							<span className="text-[8px] text-muted-foreground">No Image</span>
+						</div>
+					)}
+
+					{/* Level — bottom-left overlay */}
+					<span className="absolute bottom-3 left-1 z-10 px-1 py-0.5 bg-black/75 text-white text-[8px] font-bold border border-black">
+						Lv.{currentMonster.level}
+					</span>
+
+					{/* XP bar — bottom of image */}
+					<div className="absolute bottom-0 left-0 right-0 h-2 bg-black/60 z-10">
+						<div
+							className="h-full bg-green-400"
+							style={{ width: `${Math.min(xpPercent, 100)}%` }}
 						/>
 					</div>
-				)}
-
-				<div className="flex flex-col mb-1">
-					<h3 className="text-[10px] font-bold truncate">{currentMonster.name}</h3>
-					<span className="text-[10px] text-muted-foreground">
-						type: {ELEMENT_NAMES[currentMonster.element] || currentMonster.element}
-					</span>
 				</div>
 
-				<div className="text-[8px] text-muted-foreground mb-1">
-					Lv.{currentMonster.level}
+				{/* Name strip */}
+				<div className="px-2 py-1.5 border-t border-black">
+					<h3 className="text-[10px] font-bold truncate">
+						{currentMonster.name}
+					</h3>
 				</div>
-
-				<ProgressBar value={xpPercent} max={100} label="" />
 			</button>
 
 			{isModalOpen && (

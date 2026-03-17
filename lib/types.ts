@@ -29,6 +29,7 @@ export interface Monster {
 	xpThreshold: number;
 	availableSkillPoints: number;
 	skills: Skill[];
+	rarity: "COMMON" | "RARE" | "EPIC" | "LEGENDARY" | "MYTHIC" | null;
 }
 
 // Response from POST /invocations

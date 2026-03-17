@@ -19,6 +19,14 @@ const ELEMENT_NAMES: Record<string, string> = {
 	TERRE: "EARTH",
 };
 
+const RARITY_COLORS: Record<string, string> = {
+	COMMON: "text-gray-400",
+	RARE: "text-blue-400",
+	EPIC: "text-purple-400",
+	LEGENDARY: "text-amber-400",
+	MYTHIC: "text-red-400",
+};
+
 interface MonsterDetailModalProps {
 	monster: Monster;
 	onClose: () => void;
@@ -156,6 +164,11 @@ export function MonsterDetailModal({
 								<span>•</span>
 								<span>Lv.{currentMonster.level}</span>
 							</div>
+							{currentMonster.rarity && (
+								<span className={`text-[9px] font-bold uppercase ${RARITY_COLORS[currentMonster.rarity] ?? "text-gray-400"}`}>
+									{currentMonster.rarity}
+								</span>
+							)}
 						</div>
 						<Button variant="ghost" size="icon" onClick={onClose}>
 							<RiCloseLine className="size-4" />

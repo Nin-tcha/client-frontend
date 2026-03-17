@@ -9,6 +9,8 @@ export type SummonState = {
 		monsterId: number;
 		name: string;
 		element: string;
+		rarity: string | null;
+		pictureUrl: string | null;
 		baseHp: number;
 		baseAtk: number;
 		baseDef: number;
@@ -61,6 +63,8 @@ export async function summonAction(
 						monsterId: m.id,
 						name: m.name,
 						element: m.element,
+						rarity: m.rarity ?? null,
+						pictureUrl: m.pictureUrl ?? null,
 						baseHp: m.hp,
 						baseAtk: m.atk,
 						baseDef: m.def,
@@ -76,6 +80,8 @@ export async function summonAction(
 					monsterId: invocation.monsterId,
 					name: "Unknown Monster",
 					element: "FEU",
+					rarity: null,
+					pictureUrl: null,
 					baseHp: 0,
 					baseAtk: 0,
 					baseDef: 0,
