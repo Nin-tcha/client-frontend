@@ -87,11 +87,11 @@ export function Header() {
 			<Card>
 				<CardHeader>
 					<div className="flex items-center justify-between">
-						<div className="flex flex-col gap-1">
+						<div className="flex flex-row items-center gap-2">
 							<h2>{isLoading ? "..." : session?.username}</h2>
 							{profile && (
 								<span className="text-[8px] text-muted-foreground">
-									Lv.{profile.level} • {profile.monsterCount}/{profile.inventoryLimit} monsters
+									Lv.{profile.level}
 								</span>
 							)}
 						</div>
