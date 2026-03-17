@@ -231,7 +231,7 @@ export function MonsterDetailModal({
 					<div className="space-y-2">
 						<h3 className="text-[10px] font-bold">Skills</h3>
 						{currentMonster.skills?.length > 0 ? (
-							currentMonster.skills.map((skill) => (
+							[...currentMonster.skills].sort((a, b) => a.skillNumber - b.skillNumber).map((skill) => (
 								<SkillCard
 									key={skill.id}
 									skill={skill}
