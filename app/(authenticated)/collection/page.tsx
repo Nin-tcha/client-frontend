@@ -1,7 +1,8 @@
 import { getMyMonsters, getMyProfile } from "@/lib/api";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { MonsterCard } from "./monster-card";
 import { SortControls } from "./sort-controls";
+import { TabBar, type CollectionTab } from "./tab-bar";
+import { ReleaseHistoryView } from "./release-history-view";
 import {
 	DEFAULT_DIR,
 	SORT_OPTIONS,
@@ -15,9 +16,11 @@ const VALID_SORT_KEYS = new Set(SORT_OPTIONS.map((o) => o.value));
 export default async function CollectionPage({
 	searchParams,
 }: {
-	searchParams: Promise<{ sort?: string; dir?: string }>;
+	searchParams: Promise<{ sort?: string; dir?: string; tab?: string }>;
 }) {
 	const sp = await searchParams;
+
+	const activeTab: CollectionTab = sp.tab === "released" ? "released" : "collection";
 	const sortKey: MonsterSortKey = VALID_SORT_KEYS.has(sp.sort ?? "")
 		? (sp.sort as MonsterSortKey)
 		: "level";
@@ -39,39 +42,53 @@ export default async function CollectionPage({
 		: [];
 
 	return (
-		<Card>
-			<CardHeader>
-				<div className="flex items-center justify-between">
-					<h1>Collection</h1>
-					<span className="text-[10px] text-muted-foreground">
-						{monsterCount} / {inventoryLimit}
-					</span>
-				</div>
-			</CardHeader>
-			<CardContent>
-				{monstersResult.error && (
-					<p className="text-destructive text-[10px]">{monstersResult.error}</p>
-				)}
+		<div className="container px-4 py-8 mx-auto max-w-4xl">
+			<h1 className="text-3xl font-extrabold mb-8 text-center uppercase tracking-widest text-primary">
+				Collection
+			</h1>
 
-				{monstersResult.success &&
-					monstersResult.data &&
-					monstersResult.data.length === 0 && (
-						<p className="text-muted-foreground text-[10px] text-center">
-							No monsters yet. Go summon some!
-						</p>
-					)}
+			<TabBar activeTab={activeTab} />
 
-				{monstersResult.success && monstersResult.data && sorted.length > 0 && (
+			<div className="min-h-[400px] animate-in slide-in-from-bottom-4 fade-in duration-500">
+				{activeTab === "collection" ? (
 					<>
-						<SortControls sortKey={sortKey} sortDir={sortDir} />
-						<div className="grid grid-cols-2 gap-3">
-							{sorted.map((monster) => (
-								<MonsterCard key={monster.id} monster={monster} />
-							))}
-						</div>
+						{monstersResult.error && (
+							<p className="text-destructive text-[10px]">{monstersResult.error}</p>
+						)}
+
+						{monstersResult.success &&
+							monstersResult.data &&
+							monstersResult.data.length === 0 && (
+								<div className="flex flex-col items-center justify-center py-10 space-y-4">
+									<div className="text-4xl">📦</div>
+									<h2 className="text-xl font-bold text-muted-foreground">No monsters yet</h2>
+									<p className="text-muted-foreground text-sm text-center max-w-sm">
+										Go summon some monsters to fill your collection!
+									</p>
+								</div>
+							)}
+
+						{monstersResult.success && monstersResult.data && sorted.length > 0 && (
+							<>
+								<SortControls sortKey={sortKey} sortDir={sortDir} />
+								<div className="grid grid-cols-2 gap-3">
+									{sorted.map((monster) => (
+										<MonsterCard key={monster.id} monster={monster} />
+									))}
+								</div>
+							</>
+						)}
 					</>
+				) : (
+					<ReleaseHistoryView />
 				)}
-			</CardContent>
-		</Card>
+			</div>
+
+			{activeTab === "collection" && monstersResult.data && (
+				<p className="text-center text-xs text-muted-foreground mt-4">
+					{monsterCount} / {inventoryLimit} monsters
+				</p>
+			)}
+		</div>
 	);
 }

@@ -132,3 +132,24 @@ export interface InvocationStatusResponse {
 	status: "PENDING_STAMINA" | "PENDING" | "COMPLETED" | "FAILED";
 	monsterId: number | null;
 }
+
+// Entry from GET /monsters/release-history
+export interface ReleasedMonsterEntry {
+	id: number;
+	releasedAt: string;
+	name: string;
+	element: string | null;
+	rarity: string | null;
+	pictureUrl: string | null;
+	level: number;
+}
+
+// Entry from GET /invocations/history
+export interface InvocationHistoryEntry {
+	id: number;
+	createdAt: string;
+	monsterName: string | null;
+	monsterElement: string | null;
+	monsterRarity: string | null;
+	pictureUrl: string | null;
+}

@@ -1,7 +1,7 @@
 "use server";
 
 import { authFetch } from "./auth";
-import type { Monster, CombatHistoryEntry, ReplayResponse, StaminaStatus, FightStartResponse, FightStatusResponse, InvocationStatusResponse } from "./types";
+import type { Monster, CombatHistoryEntry, ReplayResponse, StaminaStatus, FightStartResponse, FightStatusResponse, InvocationStatusResponse, InvocationHistoryEntry, ReleasedMonsterEntry } from "./types";
 
 const INVOCATION_API_URL =
 	process.env.INVOCATION_API_URL || "http://localhost:8084";
@@ -25,6 +25,28 @@ export async function summon(): Promise<{
 		if (!response.ok && response.status !== 202) {
 			const error = await response.text();
 			return { success: false, error: error || "Summon failed" };
+		}
+
+		const data = await response.json();
+		return { success: true, data };
+	} catch {
+		return { success: false, error: "Network error" };
+	}
+}
+
+/**
+ * Get invocation history for the current user (GET /invocations/history)
+ */
+export async function getInvocationHistory(
+	limit = 20
+): Promise<{ success: boolean; data?: InvocationHistoryEntry[]; error?: string }> {
+	try {
+		const response = await authFetch(
+			`${INVOCATION_API_URL}/invocations/history?limit=${limit}`
+		);
+
+		if (!response.ok) {
+			return { success: false, error: "Failed to fetch invocation history" };
 		}
 
 		const data = await response.json();
@@ -123,6 +145,28 @@ export async function releaseMonster(
 		}
 
 		return { success: true };
+	} catch {
+		return { success: false, error: "Network error" };
+	}
+}
+
+/**
+ * Get release history for the current user (GET /monsters/release-history)
+ */
+export async function getReleaseHistory(
+	limit = 20
+): Promise<{ success: boolean; data?: ReleasedMonsterEntry[]; error?: string }> {
+	try {
+		const response = await authFetch(
+			`${MONSTER_API_URL}/monsters/release-history?limit=${limit}`
+		);
+
+		if (!response.ok) {
+			return { success: false, error: "Failed to fetch release history" };
+		}
+
+		const data = await response.json();
+		return { success: true, data };
 	} catch {
 		return { success: false, error: "Network error" };
 	}
