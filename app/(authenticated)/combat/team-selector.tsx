@@ -6,10 +6,26 @@ import { getMyMonsters, getMyProfile, setTeam } from "@/lib/api";
 import { MonsterCard } from "../collection/monster-card";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
+import {
+	DEFAULT_DIR,
+	SORT_OPTIONS,
+	type MonsterSortDir,
+	type MonsterSortKey,
+	sortMonsters,
+} from "@/lib/monster-sort";
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "@/components/ui/select";
 
 export function TeamSelector() {
 	const [monsters, setMonsters] = useState<Monster[]>([]);
 	const [selectedIds, setSelectedIds] = useState<number[]>([]);
+	const [sortKey, setSortKey] = useState<MonsterSortKey>("level");
+	const [sortDir, setSortDir] = useState<MonsterSortDir>(DEFAULT_DIR["level"]);
 	const [isPending, startTransition] = useTransition();
 	const toast = useToast();
 
@@ -106,10 +122,38 @@ export function TeamSelector() {
 			<hr className="border-border" />
 
 			<div>
-				<h2 className="text-xl font-bold mb-2">Available Monsters</h2>
+				<div className="flex items-center gap-3 mb-2">
+					<h2 className="text-xl font-bold">Available Monsters</h2>
+					<Select
+						value={sortKey}
+						onValueChange={(v) => {
+							const key = v as MonsterSortKey;
+							setSortKey(key);
+							setSortDir(DEFAULT_DIR[key]);
+						}}
+					>
+						<SelectTrigger size="sm">
+							<SelectValue />
+						</SelectTrigger>
+						<SelectContent>
+							{SORT_OPTIONS.map((opt) => (
+								<SelectItem key={opt.value} value={opt.value}>
+									{opt.label}
+								</SelectItem>
+							))}
+						</SelectContent>
+					</Select>
+					<button
+						type="button"
+						className="text-[10px] text-muted-foreground border border-input px-1.5 py-1 hover:text-foreground transition-colors"
+						onClick={() => setSortDir((d) => (d === "asc" ? "desc" : "asc"))}
+						title="Toggle sort direction"
+					>
+						{sortDir === "asc" ? "↑" : "↓"}
+					</button>
+				</div>
 				<div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-					{monsters
-                        .sort((a, b) => b.level - a.level) // Sort by level desc
+					{sortMonsters(monsters, sortKey, sortDir)
                         .map((monster) => (
 						<div key={monster.id} className="relative">
 							<MonsterCard

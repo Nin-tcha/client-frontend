@@ -1,8 +1,29 @@
 import { getMyMonsters, getMyProfile } from "@/lib/api";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { MonsterCard } from "./monster-card";
+import { SortControls } from "./sort-controls";
+import {
+	DEFAULT_DIR,
+	SORT_OPTIONS,
+	type MonsterSortDir,
+	type MonsterSortKey,
+	sortMonsters,
+} from "@/lib/monster-sort";
 
-export default async function CollectionPage() {
+const VALID_SORT_KEYS = new Set(SORT_OPTIONS.map((o) => o.value));
+
+export default async function CollectionPage({
+	searchParams,
+}: {
+	searchParams: Promise<{ sort?: string; dir?: string }>;
+}) {
+	const sp = await searchParams;
+	const sortKey: MonsterSortKey = VALID_SORT_KEYS.has(sp.sort ?? "")
+		? (sp.sort as MonsterSortKey)
+		: "level";
+	const sortDir: MonsterSortDir =
+		sp.dir === "asc" || sp.dir === "desc" ? sp.dir : DEFAULT_DIR[sortKey];
+
 	const [monstersResult, profileResult] = await Promise.all([
 		getMyMonsters(),
 		getMyProfile(),
@@ -12,6 +33,10 @@ export default async function CollectionPage() {
 	const inventoryLimit = profileResult.data
 		? 10 + profileResult.data.level
 		: 11;
+
+	const sorted = monstersResult.data
+		? sortMonsters(monstersResult.data, sortKey, sortDir)
+		: [];
 
 	return (
 		<Card>
@@ -36,15 +61,16 @@ export default async function CollectionPage() {
 						</p>
 					)}
 
-				{monstersResult.success &&
-					monstersResult.data &&
-					monstersResult.data.length > 0 && (
+				{monstersResult.success && monstersResult.data && sorted.length > 0 && (
+					<>
+						<SortControls sortKey={sortKey} sortDir={sortDir} />
 						<div className="grid grid-cols-2 gap-3">
-							{monstersResult.data.map((monster) => (
+							{sorted.map((monster) => (
 								<MonsterCard key={monster.id} monster={monster} />
 							))}
 						</div>
-					)}
+					</>
+				)}
 			</CardContent>
 		</Card>
 	);
