@@ -18,8 +18,8 @@ export default function CombatPage() {
 	const [fightResult, setFightResult] = useState<FightResult | null>(null);
 	const [fightOpponent, setFightOpponent] =
 		useState<LeaderboardEntry | null>(null);
-	const [myMonster, setMyMonster] = useState<Monster | null>(null);
-	const [oppMonster, setOppMonster] = useState<Monster | null>(null);
+	const [myTeam, setMyTeam] = useState<Monster[]>([]);
+	const [oppTeam, setOppTeam] = useState<Monster[]>([]);
 	const [myUsername, setMyUsername] = useState<string>("");
 	const [oppUsername, setOppUsername] = useState<string>("");
 	const [loadingTeam, setLoadingTeam] = useState(false);
@@ -31,7 +31,7 @@ export default function CombatPage() {
 	const pollCountRef = useRef(0);
 	const pollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-	// Fetch my active monster when entering arena
+	// Fetch my full team when entering arena
 	useEffect(() => {
 		if (view !== "arena") return;
 		let cancelled = false;
@@ -42,11 +42,9 @@ export default function CombatPage() {
 			if (p.data) {
 				setMyUsername(p.data.username);
 				if (p.data.teamIds && p.data.teamIds.length > 0) {
-					const res = await getBatchMonsters([
-						p.data.teamIds[0],
-					]);
+					const res = await getBatchMonsters(p.data.teamIds);
 					if (!cancelled && res.data && res.data.length > 0) {
-						setMyMonster(res.data[0]);
+						setMyTeam(res.data);
 					}
 				}
 			}
@@ -135,10 +133,10 @@ export default function CombatPage() {
 	const handleFightInitiated = (
 		fightId: number,
 		opponent: LeaderboardEntry,
-		oppMonsterData: Monster
+		oppTeamData: Monster[]
 	) => {
 		setFightOpponent(opponent);
-		setOppMonster(oppMonsterData);
+		setOppTeam(oppTeamData);
 		setOppUsername(opponent.username);
 		setFightError(null);
 		setPendingFightId(fightId);
@@ -150,14 +148,14 @@ export default function CombatPage() {
 
 	const handleReplayStart = (
 		result: FightResult,
-		replayMyMonster: Monster,
-		replayOppMonster: Monster,
+		replayMyTeam: Monster[],
+		replayOppTeam: Monster[],
 		replayMyUsername: string,
 		replayOppUsername: string
 	) => {
 		setFightResult(result);
-		setMyMonster(replayMyMonster);
-		setOppMonster(replayOppMonster);
+		setMyTeam(replayMyTeam);
+		setOppTeam(replayOppTeam);
 		setMyUsername(replayMyUsername);
 		setOppUsername(replayOppUsername);
 		setIsReplay(true);
@@ -166,7 +164,7 @@ export default function CombatPage() {
 	const handleBattleClosed = () => {
 		setFightResult(null);
 		setFightOpponent(null);
-		setOppMonster(null);
+		setOppTeam([]);
 		setOppUsername("");
 		setIsReplay(false);
 	};
@@ -178,17 +176,17 @@ export default function CombatPage() {
 		setPendingFightId(null);
 		setFightError(null);
 		setFightOpponent(null);
-		setOppMonster(null);
+		setOppTeam([]);
 		setOppUsername("");
 	};
 
 	// Show battle scene when fight result is ready
-	if (fightResult && myMonster && oppMonster) {
+	if (fightResult && myTeam.length > 0 && oppTeam.length > 0) {
 		return (
 			<BattleScene
 				result={fightResult}
-				myMonster={myMonster}
-				oppMonster={oppMonster}
+				myTeam={myTeam}
+				oppTeam={oppTeam}
 				myUsername={myUsername}
 				oppUsername={isReplay ? oppUsername : fightOpponent?.username || oppUsername}
 				onClose={handleBattleClosed}
@@ -294,7 +292,7 @@ export default function CombatPage() {
 							Preparing your team...
 						</p>
 					</div>
-				) : myMonster ? (
+				) : myTeam.length > 0 ? (
 					<MatchmakingView onFightInitiated={handleFightInitiated} />
 				) : (
 					<div className="text-center py-10 space-y-4">

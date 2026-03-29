@@ -11,6 +11,16 @@ import Image from "next/image";
 import { RiAddLine, RiCloseLine, RiDeleteBin6Line } from "@remixicon/react";
 import { LoadingOverlay } from "@/components/ui/loader";
 import { useToast } from "@/components/ui/toast";
+import {
+	AlertDialog,
+	AlertDialogAction,
+	AlertDialogCancel,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const ELEMENT_NAMES: Record<string, string> = {
 	FEU: "FIRE",
@@ -86,6 +96,7 @@ export function MonsterDetailModal({
 	const [isPending, startTransition] = useTransition();
 	const { refresh } = useAuth();
 	const [currentMonster, setCurrentMonster] = useState(monster);
+	const [confirmOpen, setConfirmOpen] = useState(false);
 	const toast = useToast();
 
 	const handleUpgradeSkill = (skillNumber: number) => {
@@ -129,18 +140,17 @@ export function MonsterDetailModal({
 	};
 
 	const handleRelease = () => {
-		if (confirm(`Release ${currentMonster.name}? This cannot be undone!`)) {
-			startTransition(async () => {
-				const result = await releaseMonsterAction(currentMonster.id);
-				if (result.success) {
-					onRelease();
-					onClose();
-					refresh();
-				} else {
-					toast.error(result.error || "Failed to release monster");
-				}
-			});
-		}
+		startTransition(async () => {
+			const result = await releaseMonsterAction(currentMonster.id);
+			if (result.success) {
+				toast.success("Monster released!");
+				onRelease();
+				onClose();
+				refresh();
+			} else {
+				toast.error(result.error || "Failed to release monster");
+			}
+		});
 	};
 
 	const xpPercent = currentMonster.xpThreshold > 0
@@ -246,16 +256,32 @@ export function MonsterDetailModal({
 					</div>
 
 					{/* Release Button */}
-					<Button
-						variant="destructive"
-						size="sm"
-						className="w-full"
-						onClick={handleRelease}
-						disabled={isPending}
-					>
-						<RiDeleteBin6Line className="size-3 mr-1" />
-						Release Monster
-					</Button>
+					<AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+						<Button
+							variant="destructive"
+							size="sm"
+							className="w-full"
+							onClick={() => setConfirmOpen(true)}
+							disabled={isPending}
+						>
+							<RiDeleteBin6Line className="size-3 mr-1" />
+							Release Monster
+						</Button>
+						<AlertDialogContent size="sm">
+							<AlertDialogHeader>
+								<AlertDialogTitle>Release {currentMonster.name}?</AlertDialogTitle>
+								<AlertDialogDescription>
+									This cannot be undone.
+								</AlertDialogDescription>
+							</AlertDialogHeader>
+							<AlertDialogFooter>
+								<AlertDialogCancel>Cancel</AlertDialogCancel>
+								<AlertDialogAction variant="destructive" onClick={handleRelease}>
+									Release
+								</AlertDialogAction>
+							</AlertDialogFooter>
+						</AlertDialogContent>
+					</AlertDialog>
 				</CardContent>
 			</Card>
 		</div>

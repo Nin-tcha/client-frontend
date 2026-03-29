@@ -18,7 +18,7 @@ interface MatchmakingViewProps {
 	onFightInitiated: (
 		fightId: number,
 		opponent: LeaderboardEntry,
-		oppMonster: Monster
+		oppTeam: Monster[]
 	) => void;
 }
 
@@ -69,7 +69,7 @@ export function MatchmakingView({ onFightInitiated }: MatchmakingViewProps) {
 			const res = await startFight(opponent.username);
 			if (res.success && res.data) {
 				refreshStamina();
-				onFightInitiated(res.data.fightId, opponent, oppTeam[0]);
+				onFightInitiated(res.data.fightId, opponent, oppTeam);
 			} else {
 				setError(res.error || "Failed to start fight");
 				refreshStamina();
@@ -117,7 +117,7 @@ export function MatchmakingView({ onFightInitiated }: MatchmakingViewProps) {
 				<div className="flex justify-center gap-4">
 					{oppTeam.length > 0 ? (
 						oppTeam.map((m) => (
-							<div key={m.id} className="w-1/3 max-w-[180px]">
+							<div key={m.id} className="w-1/3">
 								{/* Only use MonsterCard for display, disable interactions */}
 								<div className="pointer-events-none">
 									<MonsterCard monster={m} />

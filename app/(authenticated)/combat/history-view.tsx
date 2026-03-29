@@ -15,8 +15,8 @@ import { useEffect, useState, useTransition } from "react";
 interface HistoryViewProps {
 	onReplayStart: (
 		result: FightResult,
-		myMonster: Monster,
-		oppMonster: Monster,
+		myTeam: Monster[],
+		oppTeam: Monster[],
 		myUsername: string,
 		oppUsername: string
 	) => void;
@@ -47,17 +47,14 @@ export function HistoryView({ onReplayStart, myUsername }: HistoryViewProps) {
 			const res = await replayCombat(entry.id);
 			setReplayingId(null);
 			if (res.success && res.data) {
-				const { replay, monsterA, monsterB, original } = res.data;
+				const { replay, teamA, teamB, original } = res.data;
 
-				// Determine which monster is "mine" and which is the opponent's
 				const isPlayerA = myUsername === original.playerA;
-				const myMonster = isPlayerA ? monsterA : monsterB;
-				const oppMonster = isPlayerA ? monsterB : monsterA;
-				const oppUsername = isPlayerA
-					? original.playerB
-					: original.playerA;
+				const myTeam = isPlayerA ? teamA : teamB;
+				const oppTeam = isPlayerA ? teamB : teamA;
+				const oppUsername = isPlayerA ? original.playerB : original.playerA;
 
-				onReplayStart(replay, myMonster, oppMonster, myUsername, oppUsername);
+				onReplayStart(replay, myTeam, oppTeam, myUsername, oppUsername);
 			} else {
 				setError(res.error || "Replay failed");
 			}

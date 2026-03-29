@@ -21,7 +21,7 @@ export default async function CollectionPage({
 	const sp = await searchParams;
 
 	const activeTab: CollectionTab = sp.tab === "released" ? "released" : "collection";
-	const sortKey: MonsterSortKey = VALID_SORT_KEYS.has(sp.sort ?? "")
+	const sortKey: MonsterSortKey = VALID_SORT_KEYS.has(sp.sort as MonsterSortKey)
 		? (sp.sort as MonsterSortKey)
 		: "level";
 	const sortDir: MonsterSortDir =

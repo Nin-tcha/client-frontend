@@ -59,7 +59,7 @@ export function MonsterCard({
 			<button
 				type="button"
 				onClick={handleClick}
-				className={`border-4 bg-card relative text-left w-full hover:bg-muted transition-colors cursor-pointer overflow-hidden shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:shadow-none active:translate-x-[4px] active:translate-y-[4px] ${
+				className={`border-4 bg-card relative text-left w-full h-full flex flex-col hover:bg-muted transition-colors cursor-pointer overflow-hidden shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:shadow-none active:translate-x-[4px] active:translate-y-[4px] ${
 					selected
 						? "border-primary ring-2 ring-primary"
 						: `${rarityBorder} ${elementBorder}`

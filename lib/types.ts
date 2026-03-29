@@ -55,7 +55,7 @@ export interface LeaderboardEntry {
 }
 
 export interface CombatEvent {
-	type: "TURN_START" | "SKILL_USE" | "DAMAGE" | "KO" | "VICTORY" | "SKIP";
+	type: "TURN_START" | "SKILL_USE" | "DAMAGE" | "KO" | "VICTORY" | "SKIP" | "MONSTER_ENTERED";
 	message?: string;
 	data: Record<string, any>;
 	turn?: number;
@@ -110,8 +110,8 @@ export interface CombatHistoryEntry {
 export interface ReplayResponse {
 	original: CombatHistoryEntry;
 	replay: FightResult;
-	monsterA: Monster;
-	monsterB: Monster;
+	teamA: Monster[];
+	teamB: Monster[];
 }
 
 // Stamina status from stamina-service

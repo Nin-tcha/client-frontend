@@ -9,14 +9,16 @@ import { FighterSprite } from "./fighter-sprite";
 
 interface BattleSceneProps {
 	result: FightResult;
-	myMonster: Monster;
-	oppMonster: Monster;
+	myTeam: Monster[];
+	oppTeam: Monster[];
 	myUsername?: string;
 	oppUsername?: string;
 	onClose: () => void;
 }
 
 interface FighterState {
+	name: string;
+	image: string;
 	currentHp: number;
 	maxHp: number;
 	animation: "idle" | "attacking" | "hit" | "dying";
@@ -39,6 +41,8 @@ const ELEMENT_LABELS: Record<string, string> = {
 // --- Reducer types ---
 
 interface BattleState {
+	myTeam: Monster[];
+	oppTeam: Monster[];
 	eventIndex: number;
 	dialogue: string;
 	isFinished: boolean;
@@ -52,10 +56,10 @@ interface BattleState {
 }
 
 type BattleAction =
-	| { type: "PROCESS_EVENT"; event: CombatEvent; myUsername?: string; myMonsterName: string }
+	| { type: "PROCESS_EVENT"; event: CombatEvent; myUsername?: string }
 	| { type: "FINISH"; winner: string; myUsername?: string }
 	| { type: "ADVANCE" }
-	| { type: "SKIP"; events: CombatEvent[]; myUsername?: string; myMonsterHp: number; oppMonsterHp: number };
+	| { type: "SKIP"; events: CombatEvent[]; myUsername?: string };
 
 function battleReducer(state: BattleState, action: BattleAction): BattleState {
 	switch (action.type) {
@@ -74,18 +78,42 @@ function battleReducer(state: BattleState, action: BattleAction): BattleState {
 			};
 
 		case "SKIP": {
-			let myHP = action.myMonsterHp;
-			let oppHP = action.oppMonsterHp;
+			const { myTeam, oppTeam } = state;
+			let myName = myTeam[0].name;
+			let myImage = myTeam[0].pictureUrl || "";
+			let myHp = myTeam[0].hp;
+			let myMaxHp = myTeam[0].hp;
+			let oppName = oppTeam[0].name;
+			let oppImage = oppTeam[0].pictureUrl || "";
+			let oppHp = oppTeam[0].hp;
+			let oppMaxHp = oppTeam[0].hp;
 
 			action.events.forEach((e) => {
 				if (e.type === "DAMAGE") {
 					const isMe = e.targetOwner === action.myUsername;
-					if (isMe) myHP = e.data.hpAfter as number;
-					else oppHP = e.data.hpAfter as number;
+					if (isMe) myHp = e.data.hpAfter as number;
+					else oppHp = e.data.hpAfter as number;
 				} else if (e.type === "KO") {
+					const isMe = e.targetOwner === action.myUsername;
+					if (isMe) myHp = 0;
+					else oppHp = 0;
+				} else if (e.type === "MONSTER_ENTERED") {
 					const isMe = e.actorOwner === action.myUsername;
-					if (isMe) myHP = 0;
-					else oppHP = 0;
+					const team = isMe ? myTeam : oppTeam;
+					const newMon = team.find((m) => m.name === e.actor);
+					if (newMon) {
+						if (isMe) {
+							myName = newMon.name;
+							myImage = newMon.pictureUrl || "";
+							myHp = newMon.hp;
+							myMaxHp = newMon.hp;
+						} else {
+							oppName = newMon.name;
+							oppImage = newMon.pictureUrl || "";
+							oppHp = newMon.hp;
+							oppMaxHp = newMon.hp;
+						}
+					}
 				}
 			});
 
@@ -93,20 +121,24 @@ function battleReducer(state: BattleState, action: BattleAction): BattleState {
 				...state,
 				eventIndex: action.events.length,
 				myFighter: {
-					...state.myFighter,
-					currentHp: myHP,
-					animation: myHP === 0 ? "dying" : "idle",
+					name: myName,
+					image: myImage,
+					currentHp: myHp,
+					maxHp: myMaxHp,
+					animation: myHp === 0 ? "dying" : "idle",
 				},
 				oppFighter: {
-					...state.oppFighter,
-					currentHp: oppHP,
-					animation: oppHP === 0 ? "dying" : "idle",
+					name: oppName,
+					image: oppImage,
+					currentHp: oppHp,
+					maxHp: oppMaxHp,
+					animation: oppHp === 0 ? "dying" : "idle",
 				},
 			};
 		}
 
 		case "PROCESS_EVENT": {
-			const { event, myUsername, myMonsterName } = action;
+			const { event, myUsername } = action;
 
 			// Base reset for every new event step
 			const next: BattleState = {
@@ -126,19 +158,15 @@ function battleReducer(state: BattleState, action: BattleAction): BattleState {
 					break;
 
 				case "SKILL_USE":
-				case "SKIP":
+				case "SKIP": {
 					next.dialogue = event.message || `${event.actor} acts!`;
 					if (event.type === "SKILL_USE") {
 						const el = event.data.skillElement as string;
 						if (el) next.currentElement = el;
 
-						let isActorMe = false;
-						if (event.actorOwner && myUsername) {
-							isActorMe = event.actorOwner === myUsername;
-						} else {
-							const actorName = event.actor?.trim();
-							isActorMe = actorName === myMonsterName.trim();
-						}
+						const isActorMe = event.actorOwner
+							? event.actorOwner === myUsername
+							: event.actor?.trim() === state.myFighter.name.trim();
 
 						if (isActorMe) {
 							next.myFighter = { ...next.myFighter, animation: "attacking" };
@@ -148,18 +176,15 @@ function battleReducer(state: BattleState, action: BattleAction): BattleState {
 					}
 					next.stepDelay = 1500;
 					break;
+				}
 
 				case "DAMAGE": {
 					next.dialogue = event.message || `${event.target} takes damage!`;
 					const hpAfter = event.data.hpAfter as number;
 
-					let isTargetMe = false;
-					if (event.targetOwner && myUsername) {
-						isTargetMe = event.targetOwner === myUsername;
-					} else {
-						const targetName = event.target?.trim();
-						isTargetMe = targetName === myMonsterName.trim();
-					}
+					const isTargetMe = event.targetOwner
+						? event.targetOwner === myUsername
+						: event.target?.trim() === state.myFighter.name.trim();
 
 					if (isTargetMe) {
 						next.myFighter = { ...next.myFighter, currentHp: hpAfter, animation: "hit" };
@@ -179,15 +204,45 @@ function battleReducer(state: BattleState, action: BattleAction): BattleState {
 					break;
 				}
 
-				case "KO":
-					next.dialogue = event.message || `${event.target} works!`;
-					if (event.target === myMonsterName) {
+				case "KO": {
+					next.dialogue = event.message || `${event.target} is KO!`;
+					const isTargetMe = event.targetOwner
+						? event.targetOwner === myUsername
+						: event.target?.trim() === state.myFighter.name.trim();
+					if (isTargetMe) {
 						next.myFighter = { ...next.myFighter, animation: "dying" };
 					} else {
 						next.oppFighter = { ...next.oppFighter, animation: "dying" };
 					}
 					next.stepDelay = 2000;
 					break;
+				}
+
+				case "MONSTER_ENTERED": {
+					const isMe = event.actorOwner === myUsername;
+					const team = isMe ? state.myTeam : state.oppTeam;
+					const newMon = team.find((m) => m.name === event.actor);
+					if (newMon) {
+						const newFighter: FighterState = {
+							name: newMon.name,
+							image: newMon.pictureUrl || "",
+							currentHp: newMon.hp,
+							maxHp: newMon.hp,
+							animation: "idle",
+						};
+						if (isMe) {
+							next.myFighter = newFighter;
+							next.dialogue = `Go, ${newMon.name}!`;
+						} else {
+							next.oppFighter = newFighter;
+							next.dialogue = `${event.actorOwner ?? "Opponent"} sends out ${newMon.name}!`;
+						}
+					} else {
+						next.dialogue = event.message || `${event.actor} enters the battle!`;
+					}
+					next.stepDelay = 2000;
+					break;
+				}
 
 				case "VICTORY":
 					next.dialogue = event.message || `${event.data.winner} wins!`;
@@ -205,8 +260,8 @@ function battleReducer(state: BattleState, action: BattleAction): BattleState {
 
 export function BattleScene({
 	result,
-	myMonster,
-	oppMonster,
+	myTeam,
+	oppTeam,
 	myUsername,
 	oppUsername,
 	onClose,
@@ -214,14 +269,28 @@ export function BattleScene({
 	const [playbackSpeed, setPlaybackSpeed] = useState(1);
 
 	const [state, dispatch] = useReducer(battleReducer, {
+		myTeam,
+		oppTeam,
 		eventIndex: 0,
 		dialogue: "Battle Start!",
 		isFinished: false,
 		currentTurn: 1,
 		dialogueEffect: "NORMAL" as const,
 		currentElement: null,
-		myFighter: { currentHp: myMonster.hp, maxHp: myMonster.hp, animation: "idle" as const },
-		oppFighter: { currentHp: oppMonster.hp, maxHp: oppMonster.hp, animation: "idle" as const },
+		myFighter: {
+			name: myTeam[0].name,
+			image: myTeam[0].pictureUrl || "",
+			currentHp: myTeam[0].hp,
+			maxHp: myTeam[0].hp,
+			animation: "idle" as const,
+		},
+		oppFighter: {
+			name: oppTeam[0].name,
+			image: oppTeam[0].pictureUrl || "",
+			currentHp: oppTeam[0].hp,
+			maxHp: oppTeam[0].hp,
+			animation: "idle" as const,
+		},
 		stepDelay: 1500,
 	});
 
@@ -253,9 +322,8 @@ export function BattleScene({
 			type: "PROCESS_EVENT",
 			event: result.events[eventIndex],
 			myUsername,
-			myMonsterName: myMonster.name,
 		});
-	}, [eventIndex, result.events, result.winner, isFinished, myUsername, myMonster.name]);
+	}, [eventIndex, result.events, result.winner, isFinished, myUsername]);
 
 	// Schedule advancement to next event based on stepDelay from reducer
 	useEffect(() => {
@@ -278,8 +346,6 @@ export function BattleScene({
 			type: "SKIP",
 			events: result.events,
 			myUsername,
-			myMonsterHp: myMonster.hp,
-			oppMonsterHp: oppMonster.hp,
 		});
 	};
 
@@ -293,8 +359,8 @@ export function BattleScene({
 				{/* Enemy (Top Right) */}
 				<div className="absolute top-[10%] right-[10%] flex flex-col items-center z-10 scale-75 sm:scale-100">
 					<FighterSprite
-						name={oppMonster.name}
-						image={oppMonster.pictureUrl || ""}
+						name={oppFighter.name}
+						image={oppFighter.image}
 						currentHp={oppFighter.currentHp}
 						maxHp={oppFighter.maxHp}
 						isMyMonster={false}
@@ -306,8 +372,8 @@ export function BattleScene({
 				{/* Player (Bottom Left) */}
 				<div className="absolute bottom-[10%] left-[10%] flex flex-col items-center z-20 scale-100 sm:scale-110">
 					<FighterSprite
-						name={myMonster.name}
-						image={myMonster.pictureUrl || ""}
+						name={myFighter.name}
+						image={myFighter.image}
 						currentHp={myFighter.currentHp}
 						maxHp={myFighter.maxHp}
 						isMyMonster={true}
@@ -369,7 +435,7 @@ export function BattleScene({
 					)}
 					{!isFinished && (
 						<div className="flex flex-col items-end gap-1.5">
-							
+
 							<div className="flex flex-col items-end">
 								<div className="text-[10px] text-muted-foreground animate-pulse text-right">
 									Auto-playing

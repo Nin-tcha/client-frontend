@@ -80,12 +80,12 @@ export function TeamSelector() {
 		<div className="space-y-6">
 			<div>
 				<h2 className="text-xl font-bold mb-2">My Team ({selectedIds.length}/3)</h2>
-				<div className="flex gap-4 min-h-[140px]">
+				<div className="flex gap-4">
 					{selectedIds.map((id) => {
 						const monster = monsters.find((m) => m.id === id);
 						if (!monster) return null;
 						return (
-							<div key={id} className="w-1/3 max-w-[200px]">
+							<div key={id} className="w-1/3">
 								<MonsterCard
 									monster={monster}
 									onClick={() => toggleSelection(id)}
@@ -101,7 +101,7 @@ export function TeamSelector() {
 									// biome-ignore lint/suspicious/noArrayIndexKey: <explanation>
 									i
 								}`}
-								className="w-1/3 max-w-[200px] border-2 border-dashed border-muted-foreground/25 rounded-lg flex items-center justify-center bg-muted/10 text-muted-foreground text-sm font-medium"
+								className="w-1/3 border-2 border-dashed border-muted-foreground/25 flex items-center justify-center bg-muted/10 text-muted-foreground text-sm font-medium aspect-square"
 							>
 								Empty Slot
 							</div>
