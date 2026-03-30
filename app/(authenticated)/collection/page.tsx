@@ -1,5 +1,5 @@
 import { getMyMonsters, getMyProfile } from "@/lib/api";
-import { MonsterCard } from "./monster-card";
+import { CollectionGrid } from "./collection-grid";
 import { SortControls } from "./sort-controls";
 import { TabBar, type CollectionTab } from "./tab-bar";
 import { ReleaseHistoryView } from "./release-history-view";
@@ -71,11 +71,7 @@ export default async function CollectionPage({
 						{monstersResult.success && monstersResult.data && sorted.length > 0 && (
 							<>
 								<SortControls sortKey={sortKey} sortDir={sortDir} />
-								<div className="grid grid-cols-2 gap-3">
-									{sorted.map((monster) => (
-										<MonsterCard key={monster.id} monster={monster} />
-									))}
-								</div>
+								<CollectionGrid monsters={sorted} />
 							</>
 						)}
 					</>
