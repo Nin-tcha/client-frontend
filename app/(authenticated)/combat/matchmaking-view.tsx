@@ -68,11 +68,14 @@ export function MatchmakingView({ onFightInitiated }: MatchmakingViewProps) {
 		startBattle(async () => {
 			const res = await startFight(opponent.username);
 			if (res.success && res.data) {
+				// Refresh immediately then again after Kafka processes the stamina deduction
 				refreshStamina();
+				setTimeout(refreshStamina, 2000);
 				onFightInitiated(res.data.fightId, opponent, oppTeam);
 			} else {
 				setError(res.error || "Failed to start fight");
 				refreshStamina();
+				setTimeout(refreshStamina, 2000);
 			}
 		});
 	};

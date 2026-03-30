@@ -9,16 +9,17 @@ interface CollectionGridProps {
 }
 
 export function CollectionGrid({ monsters }: CollectionGridProps) {
-	const [items, setItems] = useState(monsters);
+	const [releasedIds, setReleasedIds] = useState<Set<number>>(new Set());
+	const visible = monsters.filter((m) => !releasedIds.has(m.id));
 
 	return (
 		<div className="grid grid-cols-2 gap-3">
-			{items.map((monster) => (
+			{visible.map((monster) => (
 				<MonsterCard
 					key={monster.id}
 					monster={monster}
 					onMonsterUpdated={() =>
-						setItems((prev) => prev.filter((m) => m.id !== monster.id))
+						setReleasedIds((prev) => new Set([...prev, monster.id]))
 					}
 				/>
 			))}
