@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { ProgressBar } from "@/components/ui/progress-bar";
@@ -95,6 +96,7 @@ export function MonsterDetailModal({
 }: MonsterDetailModalProps) {
 	const [isPending, startTransition] = useTransition();
 	const { refresh } = useAuth();
+	const router = useRouter();
 	const [currentMonster, setCurrentMonster] = useState(monster);
 	const [confirmOpen, setConfirmOpen] = useState(false);
 	const toast = useToast();
@@ -147,6 +149,7 @@ export function MonsterDetailModal({
 				onRelease();
 				onClose();
 				refresh();
+				router.refresh();
 			} else {
 				toast.error(result.error || "Failed to release monster");
 			}
