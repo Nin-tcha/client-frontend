@@ -163,5 +163,6 @@ export async function authFetch(
   return fetch(url, {
     ...options,
     headers,
+    cache: "no-store",
   });
 }
