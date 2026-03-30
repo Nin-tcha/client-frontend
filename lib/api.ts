@@ -63,7 +63,9 @@ export async function getInvocationStatus(
 	invocationId: number
 ): Promise<{ success: boolean; data?: InvocationStatusResponse; error?: string }> {
 	try {
-		const response = await fetch(`${INVOCATION_API_URL}/invocations/${invocationId}`);
+		const response = await fetch(`${INVOCATION_API_URL}/invocations/${invocationId}`, {
+			cache: "no-store",
+		});
 
 		if (!response.ok) {
 			return { success: false, error: "Failed to get invocation status" };
